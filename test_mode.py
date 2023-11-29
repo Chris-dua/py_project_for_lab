@@ -1,6 +1,7 @@
 from typing import Optional, Generator, List
 from pathlib import Path
 import pandas as pd
+from geopy import Point, distance
 
 # const 变量，到时候可以放到另外一个file中
 data_path = Path('/Users/chris/Desktop/data_for_NWPU')
@@ -34,28 +35,23 @@ class CombatMission:
 
 # 作战任务的子类
 class CommandMission(CombatMission):
-    def execute(self):
-        print(f"{self.name} Command Mission executing.")
+    pass
 
 
 class DecisionMission(CombatMission):
-    def execute(self):
-        print(f"{self.name} Decision Mission executing.")
+    pass
 
 
 class JudgmentMission(CombatMission):
-    def execute(self):
-        print(f"{self.name} Judgment Mission executing.")
+    pass
 
 
 class ReconnaissanceMission(CombatMission):
-    def execute(self):
-        print(f"{self.name} Reconnaissance Mission executing.")
+    pass
 
 
 class StrikeMission(CombatMission):
-    def execute(self):
-        print(f"{self.name} Strike Mission executing.")
+    pass
 
 
 # 作战能力基类
@@ -173,18 +169,20 @@ class WarfareFactory:
         raise ValueError(f"Unknown equipment type: {equipment_type}")
 
 
-def read_equipment_info_from_datafile(equipment_type: str, filename: str, filepath: Path) -> []:
+def read_equipment_info_from_datafile(equipment_type: str, filename: str, filepath: Path) -> list:
     rec_equip_path = next(filepath.rglob(filename), None)
     if rec_equip_path is None:
         raise FileNotFoundError(f'{filename} not found in {filepath}.')
+    df = None
     try:
         df = pd.read_excel(rec_equip_path)
     except Exception as err:
         print(f"Read Excel file error: {err}")
     rec_equipment_list = []
-    for index, row in df.iterrows():
-        equipment_data = dict(row)
-        rec_equipment_list.append(WarfareFactory.create_equipment(equipment_type, **equipment_data))
+    if df is not None:
+        for index, row in df.iterrows():
+            equipment_data = dict(row)
+            rec_equipment_list.append(WarfareFactory.create_equipment(equipment_type, **equipment_data))
     return rec_equipment_list
 
 
@@ -192,38 +190,87 @@ def read_capability_info_from_file(filepath: Path):
     pass
 
 
-def read_mission_info_from_file(mission_type: str, filename: str, filepath: Path) -> []:
-    acquire_file_path = next(filepath.rglob(filepath), None)
+def read_mission_info_from_file(mission_type: str, filename: str, filepath: Path) -> list:
+    acquire_file_path = next(filepath.rglob(filename), None)
     if acquire_file_path is None:
         raise FileNotFoundError(f'{filename} not found in {filepath}.')
+    df = None
     try:
         df = pd.read_excel(acquire_file_path)
     except Exception as err:
         print(f"Read Excel file error: {err}")
+
     task_info_list = []
-    for index, row in df.iterrows():
-        mission_data = dict(row)
-        task_info_list.append(WarfareFactory.create_mission(mission_type, **mission_data))
-    return acquire_file_path
+    if df is not None:
+        for index, row in df.iterrows():
+            mission_data = dict(row)
+            task_info_list.append(WarfareFactory.create_mission(mission_type, **mission_data))
+    return task_info_list
 
-def get_strike_equipment(task, strike_equipment_list:[]):
+
+def get_dist(target, rec_equipment_list) -> dict:
+    dist_dict = {}
+    for index, equipment in rec_equipment_list:
+        value = equipment.__dict__['Loading platforms']
+        dist_name = value + ' ' + target.__dict__['Target name']
+        if dist_name not in dist_dict:
+            coord1 = Point(latitude=target.__dict__['Target Latitude'], longitude=target.__dict__['Target Longitudes'])
+            coord2 = Point(latitude=equipment.__dict__['Latitude'], longitude=equipment.__dict__['Longitudes'])
+            dist = distance.distance(coord1, coord2, unit='nautical')
+            dist_dict[dist_name] = dist
+    return dist_dict
+
+
+def get_platform_height(rec_equipment_list) -> dict:
+    platform_height = {}
+    for index, rec_equipment in rec_equipment_list:
+        platform_height[rec_equipment.__dict__['Loading platforms']] = rec_equipment.__dict__['Altitude']
+    return platform_height
+
+
+def get_strike_equipment(mission, strike_equipment_list: list, dist_all: dict, platform_height_list: dict) -> list:
+    strike_equipment_res = []
     for index, equipment in strike_equipment_list:
-        for key, value in equipment.__dict__.item():
-            flag = False
-            if key == 'Target type':
-                for typename in value.split('、'):
-                    if typename == task.__dict__['Target type']:
-                        flag = True
-                        break
-            elif key == 'Maximum':
-                pass
+        target_name = equipment.__dict__['Target type']
+        for typename in target_name.split('、'):
+            if typename == mission.__dict__['Target type']:
+                break
+        else:
+            break
+        dist_dict = dist_all[mission.__dict__['Target name']]
+        dist_name = equipment.__dict__['Loading platforms'] + ' ' + mission.__dict__['Targen name']
+        if equipment.__dict__['Maximum'] < dist_dict[dist_name]:
+            break
+        if equipment.__dict__['Minimum range range'] > dist_dict[dist_name]:
+            break
+        if equipment.__dict__['Hit rate'] < mission.__dict__['Target destruction value']:
+            break
+        if equipment.__dict__['Target Maximum speed'] < mission.__dict__['Target speed']:
+            break
+        if equipment.__dict__['Minimum target height'] > mission.__dict__['Target Altitude']:
+            break
+        if equipment.__dict__['Target Maximum height'] < mission.__dict__['Target Altitude']:
+            break
+        if equipment.__dict__['Minimum Launch Height'] > platform_height_list[equipment.__dict__['Loading platforms']]:
+            break
+        if equipment.__dict__['Maximum firing height Shooting Height'] < platform_height_list.__dict__['Loading platforms']:
+            break
+        strike_equipment_res.append(equipment)
+
+    return strike_equipment_res
 
 
+def mission_equipment_mapping_rule(mission_info_list: list, strike_equipment_info_list: list,
+                                   rec_equipment_info_list: list):
+    strike_equipment_dict = {}
+    dist_all = {}
+    for index, mission in mission_info_list:
+        dist_all[mission.__dict__['Target name']] = get_dist(mission, rec_equipment_info_list)
+    platform_height_list = get_platform_height(rec_equipment_info_list)
+    for index, mission in mission_info_list:
+        strike_equipment = get_strike_equipment(mission, strike_equipment_info_list, dist_all, platform_height_list)
+        strike_equipment_dict[mission] = strike_equipment
 
-def mission_equipment_mapping_rule(mission_info: [], strike_equipment_info:[], rec_equipment_info:[]):
-    for index, task in mission_info:
-        for key, value in task.__dict__.items():
-            pass
 
 
 def mission_capability_mapping_rule():
@@ -245,7 +292,8 @@ def chain_coordination_rules():
 def optimal_chain_by_evaluation_rules():
     pass
 
-try:
+
+def main():
     equipment_type = type_name['reconnaissance']
     rec_equip_file_name = equipment_file_name[equipment_type]
     rec_equipment_info_list = read_equipment_info_from_datafile(equipment_type, rec_equip_file_name, data_path)
@@ -258,6 +306,8 @@ try:
     strike_mission_file_name = 'combat_mission_info.xlsx'
     strike_mission_info_list = read_mission_info_from_file(mission_type, strike_equip_file_name, data_path)
 
+    dist_all = {}
+    for index, mission in strike_mission_info_list:
+        dist_all[mission.__dict__['Target name']] = get_dist(mission, rec_equipment_info_list)
 
-except ValueError as e:
-    print(e)
+    platform_height_list = get_platform_height(rec_equipment_info_list)
