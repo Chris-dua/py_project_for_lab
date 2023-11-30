@@ -70,28 +70,23 @@ class CombatCapability:
 
 # 作战能力的子类
 class CommandCapability(CombatCapability):
-    def activate(self):
-        print(f"{self.name} Command Capability activated.")
+    pass
 
 
 class DecisionCapability(CombatCapability):
-    def activate(self):
-        print(f"{self.name} Decision Capability activated.")
+    pass
 
 
 class JudgmentCapability(CombatCapability):
-    def activate(self):
-        print(f"{self.name} Judgment Capability activated.")
+    pass
 
 
 class ReconnaissanceCapability(CombatCapability):
-    def activate(self):
-        print(f"{self.name} Reconnaissance Capability activated.")
+    pass
 
 
 class StrikeCapability(CombatCapability):
-    def activate(self):
-        print(f"{self.name} Strike Capability activated.")
+    pass
 
 
 # 武器装备基类
@@ -105,28 +100,23 @@ class WeaponEquipment:
 
 # 武器装备的子类
 class CommandControlEquipment(WeaponEquipment):
-    def fire(self):
-        print(f"{self.name} Command Control Equipment firing.")
+    pass
 
 
 class DecisionEquipment(WeaponEquipment):
-    def fire(self):
-        print(f"{self.name} Decision Equipment firing.")
+    pass
 
 
 class JudgmentEquipment(WeaponEquipment):
-    def fire(self):
-        print(f"{self.name} Judgment Equipment firing.")
+    pass
 
 
 class ReconnaissanceEquipment(WeaponEquipment):
-    def fire(self):
-        print(f"{self.name} Reconnaissance Equipment firing.")
+    pass
 
 
 class StrikeEquipment(WeaponEquipment):
-    def fire(self):
-        print(f"{self.name} Strike Equipment firing.")
+    pass
 
 
 # 工厂类
@@ -213,7 +203,6 @@ def read_mission_info_from_file(mission_type: str, filename: str, filepath: Path
     return task_info_list
 
 
-# 将度分秒转换为十进制度数
 def dms_to_decimal(dms):
     match = re.match(r"([NSWE])?(\d+)[°](\d+)[′](\d+)[″]", dms)
     if not match:
@@ -224,17 +213,14 @@ def dms_to_decimal(dms):
         dd *= -1
     return dd
 
-    # 将十进制度数转换为弧度
+
 def haversine(lon1, lat1, lon2, lat2):
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # 哈弗赛公式
     dlon = lon2 - lon1
     dlat = lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
     c = 2 * asin(sqrt(a))
-
-    # 地球半径（以海里为单位）
-    r = 3440.065  # 这是地球半径的海里数
+    r = 3440.065
     return c * r
 
 
@@ -330,20 +316,20 @@ def mission_equipment_mapping_rule(mission_info_list: list, strike_equipment_inf
 
 
 
-def mission_capability_mapping_rule():
-    pass
-
-
-def capability_equipment_mapping_rule():
-    pass
-
-
-def equipment_cooperation_rule():
-    pass
-
-
-def chain_coordination_rules():
-    pass
+# def mission_capability_mapping_rule():
+#     pass
+#
+#
+# def capability_equipment_mapping_rule():
+#     pass
+#
+#
+# def equipment_cooperation_rule():
+#     pass
+#
+#
+# def chain_coordination_rules():
+#     pass
 
 
 def optimal_chain_by_evaluation_rules(strike_equipment_list, rec_equipment_list, mission, judge_equipment, dist):
