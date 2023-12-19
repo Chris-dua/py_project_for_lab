@@ -6,7 +6,8 @@ import re
 from math import radians, cos, sin, asin, sqrt
 
 # const 变量，到时候可以放到另外一个file中
-data_path = Path('/Users/chris/Desktop/data_for_NWPU')
+
+data_path = Path('data_for_NWPU')
 equipment_file_name = {
     'command': None,
     'decision': None,
